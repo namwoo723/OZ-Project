@@ -44,6 +44,8 @@ export default function MyMap() {
     };
     fetchStores();
   }, []);
+  
+  console.log(stores)
 
   if (!isLoaded) return <div>지도를 불러오는 중...</div>;
 
