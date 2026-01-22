@@ -37,6 +37,31 @@ export default function MyMap() {
   // 현재 위치 상태 추가
   const [center, setCenter] = useState({ lat: 35.8714, lng: 128.6014 });
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [clickedCoord, setClickedCoord] = useState<{ lat: number; lng: number } | null>(null);
+  const [newStoreName, setNewStoreName] = useState("");
+  const [newCategory, setNewCategory] = useState("붕어빵");
+
+  const fetchStores = async () => {
+    // 3. 수파베이스 호출 시 테이블 이름 뒤에 <Store> 타입을 명시
+    const { data, error } = await supabase
+      .from('stores')
+      .select('*');
+
+    if (error) {
+      console.error('데이터를 불러오지 못했습니다:', error);
+      return;
+    }
+
+    if (data) {
+      setStores(data as Store[]); // 데이터를 Store 배열로 확정
+    }
+  };
+  
+  useEffect(() => {
+    fetchStores();
+  }, []);
+
   // 위치 가져오기 함수
   const handleFindMyLocation = () => {
     if (navigator.geolocation) {
@@ -52,24 +77,39 @@ export default function MyMap() {
     }
   };
 
-  useEffect(() => {
-    const fetchStores = async () => {
-      // 3. 수파베이스 호출 시 테이블 이름 뒤에 <Store> 타입을 명시
-      const { data, error } = await supabase
-        .from('stores')
-        .select('*');
+  const handleReportSubmit = async () => {
+    // 유효성 검사(이름 공백 혹은 좌표 없을시 중단)
+    if(!newStoreName || !clickedCoord) {
+      alert("가게 이름을 입력하고 지도를 다시 클릭해 주세요.");
+      return;
+    }
 
-      if (error) {
-        console.error('데이터를 불러오지 못했습니다:', error);
-        return;
-      }
+    // 수파베이스 insert 호출
+    const { error } = await supabase
+      .from("stores")
+      .insert([
+        {
+          name: newStoreName,
+          category: newCategory,
+          lat: clickedCoord.lat,
+          lng: clickedCoord.lng,
+        },
+      ]);
+    if (error) {
+      console.error("제보 저장 실패:", error);
+      alert("저장 중 오류가 발생했습니다.");
+      return;
+    }
 
-      if (data) {
-        setStores(data as Store[]); // 데이터를 Store 배열로 확정
-      }
-    };
+    // 저장 성공 후 처리
+    alert("성공적으로 제보되었습니다!")
+    setIsModalOpen(false); // 모달 닫기
+    setNewStoreName(""); // 입력창 초기화
+
+    // 지도 데이터 새로고침 (방금 넣은 마커 바로 보이게 하기)
     fetchStores();
-  }, []);
+  }
+
   
   console.log(stores)
 
@@ -101,6 +141,16 @@ export default function MyMap() {
         mapContainerStyle = {{ width: "100%", height: "100vh" }}
         center = { center }
         zoom = {13}
+        onClick = {(e) => {
+          const lat = e.latLng?.lat();
+          const lng = e.latLng?.lng();
+
+          if (lat && lng) {
+            console.log("제보 위치:", lat, lng);
+            setClickedCoord({ lat, lng });
+            setIsModalOpen(true); // 모달 오픈
+          }
+        }}
         options = {{
           styles: [
             { "elementType": "geometry", "stylers": [{ "color": "#ebe3cd" }] },
@@ -143,6 +193,46 @@ export default function MyMap() {
           </InfoWindow>
         )}
       </GoogleMap>
+      {isModalOpen && (
+        <div style={{
+          position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+          backgroundColor: 'white', padding: '20px', borderRadius: '12px', zIndex: 100,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.2)', width: '300px', color: 'black'
+        }}>
+          <h2 style={{ marginTop: 0, fontSize: '18px' }}>🐟 새로운 맛집 제보</h2>
+          
+          <label style={{ fontSize: '12px', color: '#666' }}>가게 이름</label>
+          <input 
+            type="text" 
+            value={newStoreName}
+            onChange={(e) => setNewStoreName(e.target.value)}
+            style={{ width: '100%', padding: '8px', marginBottom: '15px', boxSizing: 'border-box' }}
+            placeholder="예: 북문 꿀붕어빵"
+          />
+
+          <label style={{ fontSize: '12px', color: '#666' }}>카테고리</label>
+          <select 
+            value={newCategory}
+            onChange={(e) => setNewCategory(e.target.value)}
+            style={{ width: '100%', padding: '8px', marginBottom: '20px' }}
+          >
+            <option value="붕어빵">붕어빵</option>
+            <option value="호떡">호떡</option>
+            <option value="군고구마">군고구마</option>
+            <option value="기타">기타</option>
+          </select>
+
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button onClick={() => setIsModalOpen(false)} style={{ flex: 1, padding: '10px', cursor: 'pointer' }}>취소</button>
+            <button 
+              onClick={handleReportSubmit}
+              style={{ flex: 1, padding: '10px', backgroundColor: '#f8c967', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}
+            >
+              제보하기
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   ) : <></>;
 }
