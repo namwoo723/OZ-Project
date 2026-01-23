@@ -42,6 +42,41 @@ export default function MyMap() {
   const [newStoreName, setNewStoreName] = useState("");
   const [newCategory, setNewCategory] = useState("붕어빵");
 
+  const [session, setSession] = useState<any>(null); // 로그인 세션
+
+  // 구글 로그인 함수
+  const handleLogin = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        queryParams: {
+          access_type: "offline",
+          prompt: "consent",
+        },
+      },
+    });
+  };
+
+  // 로그아웃 함수
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  }
+
+  // 로그인 상태 감지 useEffect
+  useEffect(() => {
+    // 현재 세션 가져오기
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+    // 로그인/로그아웃 상태 변화 구독
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+    
+    console.log(session)
+    return () => subscription.unsubscribe()
+  }, []);
+
   const fetchStores = async () => {
     // 3. 수파베이스 호출 시 테이블 이름 뒤에 <Store> 타입을 명시
     const { data, error } = await supabase
@@ -113,35 +148,50 @@ export default function MyMap() {
   
   console.log(stores)
 
+  // 버튼 공통 스타일
+  const buttonStyle = {
+      padding: "10px 15px",
+      backgroundColor: "#f8c967", // 붕어빵 색상 테마
+      border: "none",
+      borderRadius: "8px",
+      fontWeight: "bold",
+      cursor: "pointer",
+      boxShadow: "0 2px 6px rgba(0,0,0,0.3)"
+  };
+
   if (!isLoaded) return <div>지도를 불러오는 중...</div>;
 
-  return isLoaded ? (
+  return (
     <div style={{ position: "relative", width: "100%", height: "100vh" }}>
-    {/* 1. 내 위치 찾기 버튼 추가 */}
-      <button
-        onClick={handleFindMyLocation} // 여기서 함수를 사용합니다!
-        style={{
-          position: "absolute",
-          top: "20px",
-          right: "20px",
-          zIndex: 10, // 지도보다 위에 떠야 하므로 필수
-          padding: "10px 15px",
-          backgroundColor: "#f8c967", // 붕어빵 색상 테마
-          border: "none",
-          borderRadius: "8px",
-          fontWeight: "bold",
-          cursor: "pointer",
-          boxShadow: "0 2px 6px rgba(0,0,0,0.3)"
-        }}
-      >
-        📍 내 위치 찾기
-      </button>
+      {/* 상단 버튼 컨테이너 */}
+      <div style = {{ position: "absolute", top: "20px", right: "20px", zIndex: 10, display: "flex", gap: "10px"}}>
+        {/* 로그인 여부에 따라 버튼 변경 */}
+        {!session ? (
+          <button onClick = {handleLogin} style = { buttonStyle }>🔑 구글 로그인</button>
+        ) : (
+          <div style = {{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <img
+              src = {session.user.user_metadata.avatar_url}
+              alt = "profile"
+              style = {{ width: "35px", borderRadius: "50%"}}
+            />
+            <button onClick = {handleLogout} style ={buttonStyle}>로그아웃</button>
+          </div>
+        )}
+        <button onClick={handleFindMyLocation} style = {buttonStyle}>📍 내 위치 찾기</button>
+      </div>
 
+      {/* 구글 맵 컴포넌트 */}
       <GoogleMap 
         mapContainerStyle = {{ width: "100%", height: "100vh" }}
         center = { center }
         zoom = {13}
         onClick = {(e) => {
+          // 로그인했을 떄만 제보 모달 열기 로직
+          if (!session) {
+            alert("로그인 후 제보하실 수 있습니다!")
+            return;
+          }
           const lat = e.latLng?.lat();
           const lng = e.latLng?.lng();
 
@@ -193,40 +243,42 @@ export default function MyMap() {
           </InfoWindow>
         )}
       </GoogleMap>
+
+      {/* 제보 모달 */}
       {isModalOpen && (
-        <div style={{
+        <div style = {{
           position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
           backgroundColor: 'white', padding: '20px', borderRadius: '12px', zIndex: 100,
           boxShadow: '0 4px 20px rgba(0,0,0,0.2)', width: '300px', color: 'black'
         }}>
-          <h2 style={{ marginTop: 0, fontSize: '18px' }}>🐟 새로운 맛집 제보</h2>
+          <h2 style = {{ marginTop: 0, fontSize: '18px' }}>🐟 새로운 맛집 제보</h2>
           
-          <label style={{ fontSize: '12px', color: '#666' }}>가게 이름</label>
+          <label style = {{ fontSize: '12px', color: '#666' }}>가게 이름</label>
           <input 
-            type="text" 
-            value={newStoreName}
-            onChange={(e) => setNewStoreName(e.target.value)}
-            style={{ width: '100%', padding: '8px', marginBottom: '15px', boxSizing: 'border-box' }}
-            placeholder="예: 북문 꿀붕어빵"
+            type = "text" 
+            value = {newStoreName}
+            onChange = {(e) => setNewStoreName(e.target.value)}
+            style = {{ width: '100%', padding: '8px', marginBottom: '15px', boxSizing: 'border-box' }}
+            placeholder = "예: 북문 꿀붕어빵"
           />
 
-          <label style={{ fontSize: '12px', color: '#666' }}>카테고리</label>
+          <label style = {{ fontSize: '12px', color: '#666' }}>카테고리</label>
           <select 
-            value={newCategory}
-            onChange={(e) => setNewCategory(e.target.value)}
-            style={{ width: '100%', padding: '8px', marginBottom: '20px' }}
+            value = {newCategory}
+            onChange = {(e) => setNewCategory(e.target.value)}
+            style = {{ width: '100%', padding: '8px', marginBottom: '20px' }}
           >
-            <option value="붕어빵">붕어빵</option>
-            <option value="호떡">호떡</option>
-            <option value="군고구마">군고구마</option>
-            <option value="기타">기타</option>
+            <option value = "붕어빵">붕어빵</option>
+            <option value = "호떡">호떡</option>
+            <option value = "군고구마">군고구마</option>
+            <option value = "기타">기타</option>
           </select>
 
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button onClick={() => setIsModalOpen(false)} style={{ flex: 1, padding: '10px', cursor: 'pointer' }}>취소</button>
+          <div style = {{ display: 'flex', gap: '10px' }}>
+            <button onClick = {() => setIsModalOpen(false)} style = {{ flex: 1, padding: '10px', cursor: 'pointer' }}>취소</button>
             <button 
-              onClick={handleReportSubmit}
-              style={{ flex: 1, padding: '10px', backgroundColor: '#f8c967', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}
+              onClick = {handleReportSubmit}
+              style = {{ flex: 1, padding: '10px', backgroundColor: '#f8c967', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}
             >
               제보하기
             </button>
@@ -234,5 +286,5 @@ export default function MyMap() {
         </div>
       )}
     </div>
-  ) : <></>;
+  );
 }
