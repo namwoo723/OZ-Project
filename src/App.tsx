@@ -16,7 +16,7 @@ const ICON_URLS: { [key: string]: string } = {
   붕어빵: "/icons/Bungeobbang.png",
   군고구마: "/icons/sweet-potato.png",
   호떡: "/icons/Hotteok.png",
-  etc: "icons/etc.png",
+  기타: "icons/etc.png",
 }
 
 // 수파베이스 클라이언트 생성
@@ -43,6 +43,8 @@ export default function MyMap() {
   const [newCategory, setNewCategory] = useState("붕어빵");
 
   const [session, setSession] = useState<any>(null); // 로그인 세션
+
+  const [filter, setfilter] = useState("전체");
 
   // 구글 로그인 함수
   const handleLogin = async () => {
@@ -180,7 +182,26 @@ export default function MyMap() {
         )}
         <button onClick={handleFindMyLocation} style = {buttonStyle}>📍 내 위치 찾기</button>
       </div>
-
+      {/* 지도 위에 필버 버튼들 배치 */}
+      <div style = {{ position: "absolute", bottom: "30px", left: "50%", transform: "translateX(-50%)", display: "flex", gap: "8px", zIndex: 10 }}>
+        {["전체", "붕어빵", "호떡", "군고구마", "기타"].map(cat => (
+          <button
+            key = {cat}
+            onClick = {() => setfilter(cat)}
+            style = {{
+              padding: "8px 12px",
+              backgroundColor: filter === cat ? "#F8C967" : "white", // 선택된 것만 강조
+              borderRadius: "20px",
+              border: "none",
+              fontWeight: "bold",
+              cursor: "pointer",
+              boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+            }}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
       {/* 구글 맵 컴포넌트 */}
       <GoogleMap 
         mapContainerStyle = {{ width: "100%", height: "100vh" }}
@@ -219,16 +240,18 @@ export default function MyMap() {
           disableDefaultUI: true, // 불필요한 구글 버튼 제거
         }}
       >
-        {stores.map((store) => (
-          <MarkerF 
-            key = {store.id} 
-            position = {{ lat: store.lat, lng: store.lng }}
-            onClick = {() => setSelectedStore(store)} // 마커 클릭 시 데이터 저장
-            icon = {{
-              url: ICON_URLS[store.category] || "/icons/etc.png", // 카테고리 매칭
-              scaledSize: new google.maps.Size(40, 40), // 아이콘 크기 조절
-            }}
-          />
+        {stores
+          .filter(s => filter === "전체" || s.category === filter) // 필터링 로직 추가
+          .map((store) => (
+            <MarkerF 
+              key = {store.id} 
+              position = {{ lat: store.lat, lng: store.lng }}
+              onClick = {() => setSelectedStore(store)} // 마커 클릭 시 데이터 저장
+              icon = {{
+                url: ICON_URLS[store.category] || "/icons/etc.png", // 카테고리 매칭
+                scaledSize: new google.maps.Size(40, 40), // 아이콘 크기 조절
+              }}
+            />
         ))}
         {/* 선택된 가게가 있을 때만 말풍선 표시 */}
         {selectedStore && (
