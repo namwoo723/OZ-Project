@@ -16,7 +16,8 @@ const ICON_URLS: { [key: string]: string } = {
   붕어빵: "/icons/Bungeobbang.png",
   군고구마: "/icons/sweet-potato.png",
   호떡: "/icons/Hotteok.png",
-  기타: "icons/etc.png",
+  두쫀쿠: "icons/Dubai-Chewy-Cookies.png",
+  기타: "icons/etc.png",  
 }
 
 // 수파베이스 클라이언트 생성
@@ -184,7 +185,7 @@ export default function MyMap() {
       </div>
       {/* 지도 위에 필버 버튼들 배치 */}
       <div style = {{ position: "absolute", bottom: "30px", left: "50%", transform: "translateX(-50%)", display: "flex", gap: "8px", zIndex: 10 }}>
-        {["전체", "붕어빵", "호떡", "군고구마", "기타"].map(cat => (
+        {["전체", "붕어빵", "호떡", "군고구마", "두쫀쿠", "기타"].map(cat => (
           <button
             key = {cat}
             onClick = {() => setfilter(cat)}
@@ -294,6 +295,7 @@ export default function MyMap() {
             <option value = "붕어빵">붕어빵</option>
             <option value = "호떡">호떡</option>
             <option value = "군고구마">군고구마</option>
+            <option value = "두쫀쿠">두쫀쿠</option>
             <option value = "기타">기타</option>
           </select>
 
