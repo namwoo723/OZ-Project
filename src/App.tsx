@@ -17,7 +17,7 @@ const ICON_URLS: { [key: string]: string } = {
   군고구마: "/icons/sweet-potato.png",
   호떡: "/icons/Hotteok.png",
   두쫀쿠: "icons/Dubai-Chewy-Cookies.png",
-  기타: "icons/etc.png",  
+  기타: "icons/etc.png",
 }
 
 // 수파베이스 클라이언트 생성
@@ -262,7 +262,11 @@ export default function MyMap() {
           >
             <div style = {{ color: "black", padding: "5px" }}>
               <h3 style = {{ margin: 0 }}>{selectedStore.name}</h3>
-              <p style = {{ margin: "5px 0 0" }}>카테고리: {selectedStore.category}</p>
+              <p style = {{ margin: "5px 0 0", fontSize: "14px" }}>카테고리: {selectedStore.category}</p>
+              {/* 날짜 표시 추가 */}
+              <p style={{ margin: "5px 0 0", fontSize: "12px", color: "#888" }}>
+                제보일: {new Date(selectedStore.created_at).toLocaleDateString()}
+              </p>
             </div>
           </InfoWindow>
         )}
@@ -271,13 +275,13 @@ export default function MyMap() {
       {/* 제보 모달 */}
       {isModalOpen && (
         <div style = {{
-          position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-          backgroundColor: 'white', padding: '20px', borderRadius: '12px', zIndex: 100,
-          boxShadow: '0 4px 20px rgba(0,0,0,0.2)', width: '300px', color: 'black'
+          position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
+          backgroundColor: "white", padding: "20px", borderRadius: "12px", zIndex: 100,
+          boxShadow: "0 4px 20px rgba(0,0,0,0.2)", width: "300px", color: "black"
         }}>
-          <h2 style = {{ marginTop: 0, fontSize: '18px' }}>🐟 새로운 맛집 제보</h2>
+          <h2 style = {{ marginTop: 0, fontSize: "18px" }}>🐟 새로운 맛집 제보</h2>
           
-          <label style = {{ fontSize: '12px', color: '#666' }}>가게 이름</label>
+          <label style = {{ fontSize: "12px", color: "#666" }}>가게 이름</label>
           <input 
             type = "text" 
             value = {newStoreName}
