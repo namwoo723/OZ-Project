@@ -139,7 +139,7 @@ export default function MyMap({ session }: { session: any }) {
         <button onClick={handleFindMyLocation} style = {buttonStyle}>📍 내 위치 찾기</button>
       </div>
 
-      {/* 로그인 유도 모달 */}
+      {/* 로그인 모달 */}
       {!session && isLoginModalOpen && (
         <div style={{ 
           position: "absolute", top: 0, left: 0, width: "100%", height: "100%", 
@@ -147,11 +147,7 @@ export default function MyMap({ session }: { session: any }) {
           display: "flex", justifyContent: "center", alignItems: "center"
         }}>
           <div style={{ position: "relative" }}>
-            <button 
-              onClick={() => setIsLoginModalOpen(false)}
-              style={{ position: "absolute", top: "10px", right: "10px", cursor: "pointer" }}
-            >닫기</button>
-            <Login />
+            <Login onClose={() => setIsLoginModalOpen(false)}/>
           </div>
         </div>
       )}
