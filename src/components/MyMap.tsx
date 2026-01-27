@@ -12,6 +12,7 @@ interface Store {
   lat: number;
   lng: number;
   created_at: string;
+  user_id: string
 }
 
 const ICON_URLS: { [key: string]: string } = {
@@ -42,6 +43,16 @@ export default function MyMap({ session }: { session: any }) {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false); // 로그인 모달 상태
   const [toastMessage, setToastMessage] = useState(""); // 토스트 메시지 내용
   const [showToast, setShowToast] = useState(false); // 토스트 표시 여부
+  const [isTimeOver, setIsTimeOver] = useState(false); // 로딩스피너 시간 지연 상태
+
+  // 로딩스피너 시간 지연 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsTimeOver(true);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  },[]);
 
   const fetchStores = async () => {
     // 수파베이스 호출 시 테이블 이름 뒤에 <Store> 타입을 명시
@@ -99,6 +110,7 @@ export default function MyMap({ session }: { session: any }) {
           category: newCategory,
           lat: clickedCoord.lat,
           lng: clickedCoord.lng,
+          user_id: session?.user?.id // 현재 로그인한 사용자의 ID 추가
         },
       ]);
     if (error) {
@@ -108,19 +120,37 @@ export default function MyMap({ session }: { session: any }) {
     }
 
     // 저장 성공 후 처리
-    triggerToast("🐟 맛집 제보가 완료되었습니다!")
+    triggerToast("🐟 맛집 제보 완료!")
     setIsModalOpen(false); // 모달 닫기
     setNewStoreName(""); // 입력창 초기화
     // 지도 데이터 새로고침 (방금 넣은 마커 바로 보이게 하기)
     fetchStores();
   }
 
-  if (!isLoaded) {
+  const handleDeleteStore = async (storeId: string) =>{
+    if (!window.confirm("이 제보를 삭제하시겠습니까?")) return;
+
+    const { error } = await supabase
+      .from("stores") 
+      .delete()
+      .eq("id", storeId);
+    
+    if (error) {
+      triggerToast("삭제 중 오류가 발생했습니다.");
+      return;
+    }
+
+    triggerToast("제보가 삭제되었습니다.")
+    setSelectedStore(null); // 정보창 닫기
+    fetchStores(); // 목록 새로고침
+  }
+
+  if (!isLoaded || !isTimeOver) {
     return (
       <div className='spinner-overlay'>
         <img src="/icons/Bungeobbang.png" className='bungeo-spinner' alt="loading" />
         <p style={{ marginTop: "20px", fontWeight: "bold", color: "#f8c967" }}>
-          붕어빵 굽는 중...
+          붕어빵 굽는 중... 🐟
         </p>
       </div>
     )
@@ -255,6 +285,20 @@ export default function MyMap({ session }: { session: any }) {
               <p style={{ margin: "5px 0 0", fontSize: "12px", color: "#888" }}>
                 제보일: {new Date(selectedStore.created_at).toLocaleDateString()}
               </p>
+
+              {/* 삭제 버튼: 본인이 등록한 가게일때만 표시 */ }
+              {session && session?.user?.id === selectedStore.user_id && (
+                <button
+                  onClick={() => handleDeleteStore(selectedStore.id)}
+                  style={{
+                    marginTop: "10px", width: "100%", padding: "5px", 
+                    backgroundColor: "#ff4d4f", color: "white", border: "none", 
+                    borderRadius: "4px", cursor: "pointer"
+                  }}
+                >
+                  제보 삭제
+                </button>
+              )}
             </div>
           </InfoWindow>
         )}
