@@ -86,7 +86,7 @@ export default function MyMap({ session }: { session: any }) {
   const handleReportSubmit = async () => {
     // 유효성 검사(이름 공백 혹은 좌표 없을시 중단)
     if(!newStoreName || !clickedCoord) {
-      triggerToast("가게 이름을 입력하고 지도를 다시 클릭해 주세요.");
+      triggerToast("가게 이름을 입력해 주세요!");
       return;
     }
 
