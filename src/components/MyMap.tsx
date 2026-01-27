@@ -114,18 +114,6 @@ export default function MyMap({ session }: { session: any }) {
     fetchStores();
   }
 
-
-  // 버튼 공통 스타일
-  const buttonStyle = {
-      padding: "10px 15px",
-      backgroundColor: "#f8c967", // 붕어빵 색상 테마
-      border: "none",
-      borderRadius: "8px",
-      fontWeight: "bold",
-      cursor: "pointer",
-      boxShadow: "0 2px 6px rgba(0,0,0,0.3)"
-  };
-
   if (!isLoaded) return <div>지도를 불러오는 중...</div>;
 
   return (
@@ -303,3 +291,13 @@ export default function MyMap({ session }: { session: any }) {
     </div>
   );
 }
+// 버튼 공통 스타일
+const buttonStyle = {
+    padding: "10px 15px",
+    backgroundColor: "#f8c967", // 붕어빵 색상 테마
+    border: "none",
+    borderRadius: "8px",
+    fontWeight: "bold",
+    cursor: "pointer",
+    boxShadow: "0 2px 6px rgba(0,0,0,0.3)"
+};
