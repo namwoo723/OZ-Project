@@ -39,6 +39,8 @@ export default function MyMap({ session }: { session: any }) {
   const [newCategory, setNewCategory] = useState("붕어빵");
   const [filter, setfilter] = useState("전체");
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false); // 로그인 모달 상태
+  const [toastMessage, setToastMessage] = useState(""); // 토스트 메시지 내용
+  const [showToast, setShowToast] = useState(false); // 토스트 표시 여부
 
   const fetchStores = async () => {
     // 수파베이스 호출 시 테이블 이름 뒤에 <Store> 타입을 명시
@@ -70,15 +72,20 @@ export default function MyMap({ session }: { session: any }) {
             lng: position.coords.longitude,
           });
         },
-        () => alert("위치 정보를 가져올 수 없습니다.")
+        () => triggerToast("📍위치 정보를 가져올 수 없습니다. 설정을 확인해 주세요.")
       );
     }
   };
+  const triggerToast = (msg: string) => {
+    setToastMessage(msg);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
+  }
 
   const handleReportSubmit = async () => {
     // 유효성 검사(이름 공백 혹은 좌표 없을시 중단)
     if(!newStoreName || !clickedCoord) {
-      alert("가게 이름을 입력하고 지도를 다시 클릭해 주세요.");
+      triggerToast("가게 이름을 입력하고 지도를 다시 클릭해 주세요.");
       return;
     }
 
@@ -100,10 +107,9 @@ export default function MyMap({ session }: { session: any }) {
     }
 
     // 저장 성공 후 처리
-    alert("성공적으로 제보되었습니다!")
+    triggerToast("🐟 맛집 제보가 완료되었습니다!")
     setIsModalOpen(false); // 모달 닫기
     setNewStoreName(""); // 입력창 초기화
-
     // 지도 데이터 새로고침 (방금 넣은 마커 바로 보이게 하기)
     fetchStores();
   }
@@ -180,7 +186,7 @@ export default function MyMap({ session }: { session: any }) {
         onClick = {(e) => {
           // 로그인했을 떄만 제보 모달 열기 로직
           if (!session) {
-            alert("로그인 후 제보하실 수 있습니다!")
+            triggerToast("🔑 로그인 후 제보하실 수 있습니다!")
             return;
           }
           const lat = e.latLng?.lat();
@@ -281,6 +287,17 @@ export default function MyMap({ session }: { session: any }) {
               제보하기
             </button>
           </div>
+        </div>
+      )} 
+      {/* 토스트 알림 UI */}
+      {showToast && (
+        <div style = {{
+          position: "fixed", bottom: "100px", left: "50%", transform: "translateX(-50%)",
+          backgroundColor: "white", fontWeight: "bold", padding: "12px 48px", borderRadius: "20px",
+          zIndex: 2000, boxShadow: "0 2px 5px rgba(0, 0, 0, 0.2)",
+          animation: "fadeInOut 3s ease-in-out" // 애니메이션 효과
+        }}>
+          {toastMessage}
         </div>
       )}
     </div>
