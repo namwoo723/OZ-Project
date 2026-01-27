@@ -1,4 +1,4 @@
-import { GoogleMap, useJsApiLoader, MarkerF, InfoWindow } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, MarkerF, InfoWindow, MarkerClusterer } from '@react-google-maps/api';
 import { useEffect, useState } from 'react';
 import { supabase } from "../supabase"; // 기존 수파베이스 설정 파일
 import Login from '../pages/Login';
@@ -214,19 +214,34 @@ export default function MyMap({ session }: { session: any }) {
           disableDefaultUI: true, // 불필요한 구글 버튼 제거
         }}
       >
-        {stores
-          .filter(s => filter === "전체" || s.category === filter) // 필터링 로직 추가
-          .map((store) => (
-            <MarkerF 
-              key = {store.id} 
-              position = {{ lat: store.lat, lng: store.lng }}
-              onClick = {() => setSelectedStore(store)} // 마커 클릭 시 데이터 저장
-              icon = {{
-                url: ICON_URLS[store.category] || "/icons/etc.png", // 카테고리 매칭
-                scaledSize: new google.maps.Size(40, 40), // 아이콘 크기 조절
-              }}
-            />
-        ))}
+        <MarkerClusterer
+          options={{
+            styles: [{
+              url: 'icons/etc.png', // 어울릴만한 이미지 찾기
+              height: 50, width: 50,
+            }]
+          }}
+        >
+          {(clusterer) => (
+            <div>
+              {stores
+                .filter(s => filter === "전체" || s.category === filter) // 필터링 로직 추가
+                .map((store) => (
+                  <MarkerF 
+                    key = {store.id} 
+                    clusterer={clusterer}
+                    position = {{ lat: store.lat, lng: store.lng }}
+                    onClick = {() => setSelectedStore(store)} // 마커 클릭 시 데이터 저장
+                    icon = {{
+                      url: ICON_URLS[store.category] || "/icons/etc.png", // 카테고리 매칭
+                      scaledSize: new google.maps.Size(40, 40), // 아이콘 크기 조절
+                    }}
+                  />
+                ))
+              }
+            </div>
+          )}
+        </MarkerClusterer>
         {/* 선택된 가게가 있을 때만 말풍선 표시 */}
         {selectedStore && (
           <InfoWindow
