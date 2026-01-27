@@ -2,6 +2,7 @@ import { GoogleMap, useJsApiLoader, MarkerF, InfoWindow } from '@react-google-ma
 import { useEffect, useState } from 'react';
 import { supabase } from "../supabase"; // 기존 수파베이스 설정 파일
 import Login from '../pages/Login';
+import "./MyMap.css"
 
 // Store 타입 정의 (나중에 파일 따로 만들어 import 처리)
 interface Store {
@@ -114,7 +115,16 @@ export default function MyMap({ session }: { session: any }) {
     fetchStores();
   }
 
-  if (!isLoaded) return <div>지도를 불러오는 중...</div>;
+  if (!isLoaded) {
+    return (
+      <div className='spinner-overlay'>
+        <img src="/icons/Bungeobbang.png" className='bungeo-spinner' alt="loading" />
+        <p style={{ marginTop: "20px", fontWeight: "bold", color: "#f8c967" }}>
+          붕어빵 굽는 중...
+        </p>
+      </div>
+    )
+  };
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100vh" }}>
@@ -122,15 +132,15 @@ export default function MyMap({ session }: { session: any }) {
       <div style = {{ position: "absolute", top: "20px", right: "20px", zIndex: 10, display: "flex", gap: "10px"}}>
         {!session ? (
           // 비로그인 상태: 로그인 버튼 노출
-          <button onClick={() => setIsLoginModalOpen(true)} style={buttonStyle}>🔑 로그인</button>
+          <button onClick={() => setIsLoginModalOpen(true)} className="buttonStyle">🔑 로그인</button>
         ) : (
           // 로그인 상태: 프로필과 로그아웃 버튼 노출
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <img src={session?.user?.user_metadata?.avatar_url} style={{ width: "35px", borderRadius: "50%" }} />
-            <button onClick={() => supabase.auth.signOut()} style={buttonStyle}>로그아웃</button>
+            <button onClick={() => supabase.auth.signOut()} className="buttonStyle">로그아웃</button>
           </div>
         )}
-        <button onClick={handleFindMyLocation} style = {buttonStyle}>📍 내 위치 찾기</button>
+        <button onClick={handleFindMyLocation} className="buttonStyle">📍 내 위치 찾기</button>
       </div>
 
       {/* 로그인 모달 */}
@@ -279,25 +289,10 @@ export default function MyMap({ session }: { session: any }) {
       )} 
       {/* 토스트 알림 UI */}
       {showToast && (
-        <div style = {{
-          position: "fixed", bottom: "100px", left: "50%", transform: "translateX(-50%)",
-          backgroundColor: "white", fontWeight: "bold", padding: "12px 48px", borderRadius: "20px",
-          zIndex: 2000, boxShadow: "0 2px 5px rgba(0, 0, 0, 0.2)",
-          animation: "fadeInOut 3s ease-in-out" // 애니메이션 효과
-        }}>
+        <div className='toast-container'>
           {toastMessage}
         </div>
       )}
     </div>
   );
 }
-// 버튼 공통 스타일
-const buttonStyle = {
-    padding: "10px 15px",
-    backgroundColor: "#f8c967", // 붕어빵 색상 테마
-    border: "none",
-    borderRadius: "8px",
-    fontWeight: "bold",
-    cursor: "pointer",
-    boxShadow: "0 2px 6px rgba(0,0,0,0.3)"
-};

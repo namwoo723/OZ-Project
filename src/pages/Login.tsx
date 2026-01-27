@@ -38,7 +38,6 @@ export default function Login({ onClose }: {onClose: () => void}) {
     </div>
   );
 }
-
 // 스타일 정의
 const loginBoxStyle: React.CSSProperties = {
   position: "relative", // X 버튼의 기준점이 됩니다.
