@@ -1,0 +1,53 @@
+/* 로그인 박스 컨테이너 */
+.login-box {
+  position: relative;
+  padding: 50px 40px 40px;
+  border-radius: 20px;
+  background-color: white;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  width: 350px;
+}
+
+/* 상단 닫기(X) 버튼 */
+.close-x-button {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #999;
+  cursor: pointer;
+  line-height: 1;
+  padding: 5px;
+}
+
+/* 구글 로그인 버튼 */
+.google-btn {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background-color: white;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* 카카오 로그인 버튼 */
+.kakao-btn {
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  background-color: #FEE500;
+  color: #3C1E1E;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* 버튼 공통 레이아웃 */
+.login-button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
