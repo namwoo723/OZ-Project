@@ -3,39 +3,19 @@ import { useEffect, useState } from 'react';
 import { supabase } from "../supabase"; // 기존 수파베이스 설정 파일
 import Login from '../pages/Login';
 import "./MyMap.css"
-
-// Store 타입 정의 (나중에 파일 따로 만들어 import 처리)
-interface Store {
-  id: string;
-  name: string;
-  category: string;
-  lat: number;
-  lng: number;
-  created_at: string;
-  user_id: string
-}
-
-const ICON_URLS: { [key: string]: string } = {
-  붕어빵: "/icons/Bungeobbang.png",
-  군고구마: "/icons/sweet-potato.png",
-  호떡: "/icons/Hotteok.png",
-  두쫀쿠: "icons/Dubai-Chewy-Cookies.png",
-  기타: "icons/etc.png",
-}
+import type { Store } from '../types/store';
+import { CATEGORIES, ICON_URLS } from '../constants/mapIcons';
+import { GOOGLE_MAP_STYLE } from '../constants/mapStyles';
+import { storeService } from '../services/storeService';
 
 export default function MyMap({ session }: { session: any }) {
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY
   });
-
-  // useState에 제네릭 <Store[]> 추가
-  const [stores, setStores] = useState<Store[]>([]);
-  const [selectedStore, setSelectedStore] = useState<Store | null>(null); // 클릭한 가게 저장
-  
-  // 현재 위치 상태 추가
-  const [center, setCenter] = useState({ lat: 35.8714, lng: 128.6014 });
-
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [stores, setStores] = useState<Store[]>([]); // useState에 제네릭 <Store[]> 추가
+  const [selectedStore, setSelectedStore] = useState<Store | null>(null); // 클릭한 가게 저장(InfoWindow)
+  const [center, setCenter] = useState({ lat: 35.8714, lng: 128.6014 }); // 현재 위치 상태 추가
+  const [isModalOpen, setIsModalOpen] = useState(false); // 새로운 맛집 제보 모달
   const [clickedCoord, setClickedCoord] = useState<{ lat: number; lng: number } | null>(null);
   const [newStoreName, setNewStoreName] = useState("");
   const [newCategory, setNewCategory] = useState("붕어빵");
@@ -53,23 +33,19 @@ export default function MyMap({ session }: { session: any }) {
 
     return () => clearTimeout(timer);
   },[]);
-
+  
   const fetchStores = async () => {
-    // 수파베이스 호출 시 테이블 이름 뒤에 <Store> 타입을 명시
-    const { data, error } = await supabase
-      .from('stores')
-      .select('*');
-
-    if (error) {
-      console.error('데이터를 불러오지 못했습니다:', error);
-      return;
-    }
-
-    if (data) {
-      setStores(data as Store[]); // 데이터를 Store 배열로 확정
+    try {
+      const data = await storeService.fetchStores();
+      setStores(data);
+    } catch (error) {
+      console.error("데이터 로딩 실패:", error);
+      triggerToast("데이터를 불러오지 못했습니다.");
+    } finally {
+      setIsTimeOver(true); 
     }
   };
-  
+
   useEffect(() => {
     fetchStores();
   }, []);
@@ -77,17 +53,18 @@ export default function MyMap({ session }: { session: any }) {
   // 위치 가져오기 함수
   const handleFindMyLocation = () => {
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
+      navigator.geolocation.getCurrentPosition( 
         (position) => {
           setCenter({
             lat: position.coords.latitude,
             lng: position.coords.longitude,
-          });
+          }); // 현재 기기의 위치 요청 함수(배포시 보안 문제 때문에 http:// 로 시작하면 기능 작동 X)
         },
-        () => triggerToast("📍위치 정보를 가져올 수 없습니다. 설정을 확인해 주세요.")
+        () => triggerToast("📍 위치 정보를 가져올 수 없습니다. 설정을 확인해 주세요.")
       );
     }
   };
+
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
     setShowToast(true);
@@ -127,23 +104,18 @@ export default function MyMap({ session }: { session: any }) {
     fetchStores();
   }
 
-  const handleDeleteStore = async (storeId: string) =>{
+  const handleDeleteStore = async (storeId: string) => {
     if (!window.confirm("이 제보를 삭제하시겠습니까?")) return;
 
-    const { error } = await supabase
-      .from("stores") 
-      .delete()
-      .eq("id", storeId);
-    
-    if (error) {
+    try {
+      await storeService.deleteStore(storeId);
+      triggerToast("제보가 삭제되었습니다.");
+      setSelectedStore(null);
+      fetchStores(); // 다시 가져오기
+    } catch (error) {
       triggerToast("삭제 중 오류가 발생했습니다.");
-      return;
     }
-
-    triggerToast("제보가 삭제되었습니다.")
-    setSelectedStore(null); // 정보창 닫기
-    fetchStores(); // 목록 새로고침
-  }
+  };
 
   if (!isLoaded || !isTimeOver) {
     return (
@@ -188,7 +160,7 @@ export default function MyMap({ session }: { session: any }) {
 
       {/* 지도 위에 필버 버튼들 배치 */}
       <div style = {{ position: "absolute", bottom: "30px", left: "50%", transform: "translateX(-50%)", display: "flex", gap: "8px", zIndex: 10 }}>
-        {["전체", "붕어빵", "호떡", "군고구마", "두쫀쿠", "기타"].map(cat => (
+        {CATEGORIES.map(cat => (
           <button
             key = {cat}
             onClick = {() => setfilter(cat)}
@@ -227,20 +199,7 @@ export default function MyMap({ session }: { session: any }) {
           }
         }}
         options = {{
-          styles: [
-            { "elementType": "geometry", "stylers": [{ "color": "#ebe3cd" }] },
-            { "elementType": "labels.text.fill", "stylers": [{ "color": "#523735" }] },
-            { "elementType": "labels.text.stroke", "stylers": [{ "color": "#f5f1e6" }] },
-            { "featureType": "administrative", "elementType": "geometry.stroke", "stylers": [{ "color": "#c9b2a6" }] },
-            { "featureType": "landscape.natural", "elementType": "geometry", "stylers": [{ "color": "#dfd2ae" }] },
-            { "featureType": "poi", "elementType": "geometry", "stylers": [{ "color": "#dfd2ae" }] },
-            { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [{ "color": "#93817c" }] },
-            { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#f5f1e6" }] },
-            { "featureType": "road.arterial", "elementType": "geometry", "stylers": [{ "color": "#fdfcf8" }] },
-            { "featureType": "road.highway", "elementType": "geometry", "stylers": [{ "color": "#f8c967" }] },
-            { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [{ "color": "#e9bc62" }] },
-            { "featureType": "water", "elementType": "geometry.fill", "stylers": [{ "color": "#b9d3c2" }] }
-          ],
+          styles: GOOGLE_MAP_STYLE,
           disableDefaultUI: true, // 불필요한 구글 버튼 제거
         }}
       >
