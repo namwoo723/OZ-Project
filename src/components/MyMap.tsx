@@ -7,6 +7,7 @@ import type { Store } from '../types/store';
 import { CATEGORIES, ICON_URLS } from '../constants/mapIcons';
 import { GOOGLE_MAP_STYLE } from '../constants/mapStyles';
 import { storeService } from '../services/storeService';
+import ReportModal from './ReportModal';
 
 export default function MyMap({ session }: { session: any }) {
   const { isLoaded } = useJsApiLoader({
@@ -17,8 +18,6 @@ export default function MyMap({ session }: { session: any }) {
   const [center, setCenter] = useState({ lat: 35.8714, lng: 128.6014 }); // 현재 위치 상태 추가
   const [isModalOpen, setIsModalOpen] = useState(false); // 새로운 맛집 제보 모달
   const [clickedCoord, setClickedCoord] = useState<{ lat: number; lng: number } | null>(null);
-  const [newStoreName, setNewStoreName] = useState("");
-  const [newCategory, setNewCategory] = useState("붕어빵");
   const [filter, setfilter] = useState("전체");
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false); // 로그인 모달 상태
   const [toastMessage, setToastMessage] = useState(""); // 토스트 메시지 내용
@@ -71,9 +70,9 @@ export default function MyMap({ session }: { session: any }) {
     setTimeout(() => setShowToast(false), 3000);
   }
 
-  const handleReportSubmit = async () => {
+  const handleReportSubmit = async (name: string, category: string) => {
     // 유효성 검사(이름 공백 혹은 좌표 없을시 중단)
-    if(!newStoreName || !clickedCoord) {
+    if(!name || !clickedCoord) {
       triggerToast("가게 이름을 입력해 주세요!");
       return;
     }
@@ -81,17 +80,14 @@ export default function MyMap({ session }: { session: any }) {
     // 수파베이스 insert 호출
     const { error } = await supabase
       .from("stores")
-      .insert([
-        {
-          name: newStoreName,
-          category: newCategory,
+      .insert([{
+          name,
+          category,
           lat: clickedCoord.lat,
           lng: clickedCoord.lng,
           user_id: session?.user?.id // 현재 로그인한 사용자의 ID 추가
-        },
-      ]);
+      }]);
     if (error) {
-      console.error("제보 저장 실패:", error);
       alert("저장 중 오류가 발생했습니다.");
       return;
     }
@@ -99,7 +95,6 @@ export default function MyMap({ session }: { session: any }) {
     // 저장 성공 후 처리
     triggerToast("🐟 맛집 제보 완료!")
     setIsModalOpen(false); // 모달 닫기
-    setNewStoreName(""); // 입력창 초기화
     // 지도 데이터 새로고침 (방금 넣은 마커 바로 보이게 하기)
     fetchStores();
   }
@@ -265,45 +260,10 @@ export default function MyMap({ session }: { session: any }) {
 
       {/* 제보 모달 */}
       {isModalOpen && (
-        <div style = {{
-          position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
-          backgroundColor: "white", padding: "20px", borderRadius: "12px", zIndex: 100,
-          boxShadow: "0 4px 20px rgba(0,0,0,0.2)", width: "300px", color: "black"
-        }}>
-          <h2 style = {{ marginTop: 0, fontSize: "18px" }}>🐟 새로운 맛집 제보</h2>
-          
-          <label style = {{ fontSize: "12px", color: "#666" }}>가게 이름</label>
-          <input 
-            type = "text" 
-            value = {newStoreName}
-            onChange = {(e) => setNewStoreName(e.target.value)}
-            style = {{ width: '100%', padding: '8px', marginBottom: '15px', boxSizing: 'border-box' }}
-            placeholder = "예: 북문 꿀붕어빵"
-          />
-
-          <label style = {{ fontSize: '12px', color: '#666' }}>카테고리</label>
-          <select 
-            value = {newCategory}
-            onChange = {(e) => setNewCategory(e.target.value)}
-            style = {{ width: '100%', padding: '8px', marginBottom: '20px' }}
-          >
-            <option value = "붕어빵">붕어빵</option>
-            <option value = "호떡">호떡</option>
-            <option value = "군고구마">군고구마</option>
-            <option value = "두쫀쿠">두쫀쿠</option>
-            <option value = "기타">기타</option>
-          </select>
-
-          <div style = {{ display: 'flex', gap: '10px' }}>
-            <button onClick = {() => setIsModalOpen(false)} style = {{ flex: 1, padding: '10px', cursor: 'pointer' }}>취소</button>
-            <button 
-              onClick = {handleReportSubmit}
-              style = {{ flex: 1, padding: '10px', backgroundColor: '#f8c967', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}
-            >
-              제보하기
-            </button>
-          </div>
-        </div>
+        <ReportModal
+          onClose = {() => setIsModalOpen(false)}
+          onSubmit = {handleReportSubmit}
+        />
       )} 
       {/* 토스트 알림 UI */}
       {showToast && (
