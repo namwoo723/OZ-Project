@@ -200,10 +200,23 @@ export default function MyMap({ session }: { session: any }) {
       >
         <MarkerClusterer
           options={{
-            styles: [{
-              url: 'icons/etc.png', // 어울릴만한 이미지 찾기
-              height: 50, width: 50,
-            }]
+            styles: [
+              {
+                // data:image/svg+xml(선언문): SVG 이미지 데이터임을 선언, encodeURIComponent(번역기): 디버그를 위한 안전한 문자열로 번역
+                url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+                  <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50">
+                    <circle cx="25" cy="25" r="22" fill="#F8C967" stroke="white" stroke-width="2"/>
+                  </svg>
+                `)}`,
+                height: 50,
+                width: 50,
+                
+                // 텍스트 스타일: 중앙 숫자 디자인
+                textColor: "white",
+                textSize: 16,           // 숫자 크기
+                anchorText: [0, 0],     // 텍스트 위치 (0,0 이 중앙)
+              }
+            ]
           }}
         >
           {(clusterer) => (
