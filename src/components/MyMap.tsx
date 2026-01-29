@@ -24,6 +24,9 @@ export default function MyMap({ session }: { session: any }) {
   const [showToast, setShowToast] = useState(false); // 토스트 표시 여부
   const [isTimeOver, setIsTimeOver] = useState(false); // 로딩스피너 시간 지연 상태
   const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [newComment, setNewComment] = useState("");
+  const [rating, setRating] = useState(5);
 
   // 로딩스피너 시간 지연 
   useEffect(() => {
@@ -49,6 +52,43 @@ export default function MyMap({ session }: { session: any }) {
   useEffect(() => {
     fetchStores();
   }, []);
+
+  // 가게 클릭 시 리뷰 로드
+  const handleStoreClick = async (store: Store) => {
+    setSelectedStore(store);
+    try {
+      const data = await storeService.fetchReviews(store.id);
+      setReviews(data);
+    } catch (error) {
+      console.error("리뷰 로드 실패:", error)
+    }
+  };
+
+  // 리뷰 등록 함수
+  const handleReviewSubmit = async () => {
+    if (!newComment.trim()) return;
+    if (!session) {
+      triggerToast("🔑 로그인 후 리뷰를 남겨주세요!");
+      return;
+    }
+
+    try {
+      await storeService.addReview({
+        store_id: selectedStore?.id,
+        user_id: session.user.id,
+        user_name: session.user.user_metadata.full_name || "익명",
+        user_avatar: session.user.user_metadata.avatar_url,
+        rating,
+        content: newComment
+      });
+
+      setNewComment(""); // 입력창 초기화
+      triggerToast("⭐ 리뷰가 등록되었습니다!");
+      handleStoreClick(selectedStore!); // 리뷰 목록 갱신
+    } catch (error) {
+      triggerToast("리뷰 등록 중 오류가 발생했습니다.");
+    }
+  }
 
   // 실시간 위치 추적 함수
   useEffect(() => {
@@ -245,7 +285,7 @@ export default function MyMap({ session }: { session: any }) {
                     key = {store.id} 
                     clusterer={clusterer}
                     position = {{ lat: store.lat, lng: store.lng }}
-                    onClick = {() => setSelectedStore(store)} // 마커 클릭 시 데이터 저장
+                    onClick = {() => handleStoreClick(store)} // 마커 클릭 시 데이터 저장
                     icon = {{
                       url: ICON_URLS[store.category] || "/icons/etc.png", // 카테고리 매칭
                       scaledSize: new google.maps.Size(40, 40), // 아이콘 크기 조절
@@ -279,11 +319,50 @@ export default function MyMap({ session }: { session: any }) {
         {selectedStore && (
           <InfoWindow
             position = {{ lat: selectedStore.lat, lng: selectedStore.lng }}
-            onCloseClick = {() => setSelectedStore(null)} // 닫기 버튼 클릭 시 초기화
+            onCloseClick = {() => {
+              setSelectedStore(null);
+              setReviews([]); // 리뷰 상태도 초기화
+            }} // 닫기 버튼 클릭 시 초기화
           >
-            <div style = {{ color: "black", padding: "5px" }}>
+            <div style = {{ color: "black", padding: "5px", width: "250px" }}>
               <h3 style = {{ margin: 0 }}>{selectedStore.name}</h3>
-              <p style = {{ margin: "5px 0 0", fontSize: "14px" }}>카테고리: {selectedStore.category}</p>
+              <p style = {{ margin: "5px 0", fontSize: "14px" }}>카테고리: {selectedStore.category}</p>
+
+              <hr style={{ border: "0.5px solid #eee", margin: "10px 0" }} />
+
+              {/* 리뷰 목록 표시 */}
+              <div style={{ maxHeight: "150px", overflowY: "auto", marginBottom: "10px" }}>
+                {reviews.length > 0 ? reviews.map(r => (
+                  <div key={r.id} style={{ fontSize: "12px", marginBottom: "8px", borderBottom: "1px solid #f9f9f9" }}>
+                    <strong>{r.user_name}</strong> <span style={{ color: "#f8c967" }}>{"⭐".repeat(r.rating)}</span>
+                    <p style={{ margin: "2px 0" }}>{r.content}</p>
+                  </div>
+                )) : <p style={{ fontSize: "12px", color: "#999" }}>아직 리뷰가 없어요. 첫 리뷰를 남겨보세요! 🐟</p>}
+              </div>
+
+              {/* 리뷰 입력 폼 (로그인 시에만) */}
+              {session && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                  <select value={rating} onChange={(e) => setRating(Number(e.target.value))} style={{ padding: "5px", fontSize: "12px", borderRadius: "4px", border: "1px solid #ddd" }}>
+                    <option value="5">⭐⭐⭐⭐⭐</option>
+                    <option value="4">⭐⭐⭐⭐</option>
+                    <option value="3">⭐⭐⭐</option>
+                    <option value="2">⭐⭐</option>
+                    <option value="1">⭐</option>
+                  </select>
+                  <input 
+                    type="text" 
+                    value={newComment} 
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder=" 리뷰를 입력하세요..."
+                    style={{ padding: "5px", fontSize: "12px", borderRadius: "4px", border: "1px solid #ddd" }}
+                  />
+                  <button onClick={handleReviewSubmit} className="buttonStyle" style={{ padding: "5px", fontSize: "12px",  }}>리뷰 등록</button>
+                </div>
+              )}
+
+              <hr style={{ border: "0.5px solid #eee", margin: "10px 0" }} />  
+
               {/* 날짜 표시 추가 */}
               <p style={{ margin: "5px 0 0", fontSize: "12px", color: "#888" }}>
                 제보일: {new Date(selectedStore.created_at).toLocaleDateString()}
@@ -296,7 +375,7 @@ export default function MyMap({ session }: { session: any }) {
                   style={{
                     marginTop: "10px", width: "100%", padding: "5px", 
                     backgroundColor: "#ff4d4f", color: "white", border: "none", 
-                    borderRadius: "4px", cursor: "pointer"
+                    borderRadius: "8px", cursor: "pointer"
                   }}
                 >
                   제보 삭제

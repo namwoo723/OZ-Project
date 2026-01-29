@@ -30,5 +30,25 @@ export const storeService = {
       .eq("id", storeId);
 
     if (error) throw error;
+  },
+
+  async fetchReviews(storeId: string) {
+    const { data, error } = await supabase
+      .from("store_reviews")
+      .select("*")
+      .eq("store_id", storeId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    return data;
+  },
+
+  async addReview(reviewData: any) {
+    const { data, error } = await supabase
+      .from("store_reviews")
+      .insert([reviewData]);
+
+    if (error) throw error;
+    return data;
   }
 };
