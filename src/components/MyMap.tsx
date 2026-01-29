@@ -23,6 +23,7 @@ export default function MyMap({ session }: { session: any }) {
   const [toastMessage, setToastMessage] = useState(""); // 토스트 메시지 내용
   const [showToast, setShowToast] = useState(false); // 토스트 표시 여부
   const [isTimeOver, setIsTimeOver] = useState(false); // 로딩스피너 시간 지연 상태
+  const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   // 로딩스피너 시간 지연 
   useEffect(() => {
@@ -49,18 +50,34 @@ export default function MyMap({ session }: { session: any }) {
     fetchStores();
   }, []);
 
-  // 위치 가져오기 함수
-  const handleFindMyLocation = () => {
+  // 실시간 위치 추적 함수
+  useEffect(() => {
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition( 
+      const watchId = navigator.geolocation.watchPosition(
         (position) => {
-          setCenter({
+          const newPos = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
-          }); // 현재 기기의 위치 요청 함수(배포시 보안 문제 때문에 http:// 로 시작하면 기능 작동 X)
+          };
+          setMyLocation(newPos); // 내 위치 상태 업데이트
         },
-        () => triggerToast("📍 위치 정보를 가져올 수 없습니다. 설정을 확인해 주세요.")
+        (error) => console.error("위치 추적 실패:", error),
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 5000} // 정밀도 옵션
       );
+      return () => navigator.geolocation.clearWatch(watchId);
+    }
+  }, []);
+  // 위치 가져오기 함수
+  const handleFindMyLocation = () => {
+    console.log("위치 버튼 클릭!", myLocation);
+    if (myLocation) {
+      // 이미 실시간으로 추적 중인 내 위치(myLocation)로 지도 중심 이동
+      setCenter({
+        lat: myLocation.lat,
+        lng: myLocation.lng
+      });
+    } else {
+      triggerToast("📍 위치 정보를 가져올 수 없습니다. 설정을 확인해 주세요.")
     }
   };
 
@@ -239,6 +256,25 @@ export default function MyMap({ session }: { session: any }) {
             </div>
           )}
         </MarkerClusterer>
+        {/* 내 위치 마커 */}
+        {myLocation && (
+          <MarkerF
+            position = {myLocation}
+            options = {{
+              zIndex: 9999, // 다른 마커들보다 상위 표시
+              optimized: false // 구글 맵이 레이어 순서를 임의로 섞지 못하게 설정
+            }}  
+            icon = {{
+              url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">
+                  <circle cx="15" cy="15" r="8" fill="#4285F4" stroke="white" stroke-width="3"/>
+                  <circle cx="15" cy="15" r="12" fill="#4285F4" fill-opacity="0.3"/>
+                </svg>
+              `)}`,
+              anchor: new google.maps.Point(15, 15), // 중심점 설정
+            }}
+          />
+        )}
         {/* 선택된 가게가 있을 때만 말풍선 표시 */}
         {selectedStore && (
           <InfoWindow
