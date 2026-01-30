@@ -1,4 +1,4 @@
-export const CATEGORIES = ["전체", "붕어빵", "호떡", "군고구마", "두쫀쿠", "기타"] as const;
+export const CATEGORIES = ["전체", "붕어빵", "호떡", "군고구마", "두쫀쿠", "기타"] as const; // 각 단어 자체를 타입으로 쓰기 위해
 
 export const ICON_URLS: { [key: string]: string } = {
   붕어빵: "/icons/Bungeobbang.png",

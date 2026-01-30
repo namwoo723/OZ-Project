@@ -88,7 +88,27 @@ export default function MyMap({ session }: { session: any }) {
     } catch (error) {
       triggerToast("리뷰 등록 중 오류가 발생했습니다.");
     }
-  }
+  };
+
+  // 리뷰 삭제 함수
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!window.confirm("리뷰를 정말 삭제하시겠습니까?")) return;
+
+    try {
+      await storeService.deleteReview(reviewId);
+      console.log("리뷰 삭제 성공:", reviewId);
+
+      // 삭제 후 목록 새로고침 (이미 만들어둔 fetchReviews 활용)
+      if (selectedStore) {
+        const data = await storeService.fetchReviews(selectedStore.id);
+        setReviews(data);
+      }
+      triggerToast("리뷰가 삭제되었습니다.");
+    } catch (error) {
+      console.error("리뷰 삭제 실패:", error);
+      alert("리뷰 삭제 중 오류가 발생했습니다.");
+    }
+  };
 
   // 실시간 위치 추적 함수
   useEffect(() => {
@@ -243,7 +263,7 @@ export default function MyMap({ session }: { session: any }) {
           }
           const lat = e.latLng?.lat();
           const lng = e.latLng?.lng();
-
+          console.log({ lat, lng });
           if (lat && lng) {
             console.log("제보 위치:", lat, lng);
             setClickedCoord({ lat, lng });
@@ -257,6 +277,7 @@ export default function MyMap({ session }: { session: any }) {
       >
         <MarkerClusterer
           options={{
+            maxZoom: 15,
             styles: [
               {
                 // data:image/svg+xml(선언문): SVG 이미지 데이터임을 선언, encodeURIComponent(번역기): 디버그를 위한 안전한 문자열로 번역
@@ -331,15 +352,41 @@ export default function MyMap({ session }: { session: any }) {
               <hr style={{ border: "0.5px solid #eee", margin: "10px 0" }} />
 
               {/* 리뷰 목록 표시 */}
-              <div style={{ maxHeight: "150px", overflowY: "auto", marginBottom: "10px" }}>
-                {reviews.length > 0 ? reviews.map(r => (
-                  <div key={r.id} style={{ fontSize: "12px", marginBottom: "8px", borderBottom: "1px solid #f9f9f9" }}>
-                    <strong>{r.user_name}</strong> <span style={{ color: "#f8c967" }}>{"⭐".repeat(r.rating)}</span>
-                    <p style={{ margin: "2px 0" }}>{r.content}</p>
-                  </div>
-                )) : <p style={{ fontSize: "12px", color: "#999" }}>아직 리뷰가 없어요. 첫 리뷰를 남겨보세요! 🐟</p>}
+              <div style={{ maxHeight: "200px", overflowY: "auto", marginBottom: "10px" }}>
+                {reviews.length > 0 ? (
+                  reviews.map((rev: any) => (
+                    <div key={rev.id} style={{ fontSize: "12px", padding: "8px 0", borderBottom: "1px solid #f9f9f9" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div>
+                          <strong>{rev.user_name}</strong> 
+                          <span style={{ color: "#f8c967", marginLeft: "5px" }}>{"⭐".repeat(rev.rating)}</span>
+                        </div>
+                        
+                        {/* 본인일 때만 삭제 버튼 표시 */}
+                        {session?.user?.id === rev.user_id && (
+                          <button 
+                            onClick={() => handleDeleteReview(rev.id)}
+                            style={{ 
+                              background: "none", border: "none", color: "#ff4d4f", 
+                              cursor: "pointer", fontSize: "10px"
+                            }}
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* 리뷰 내용 및 날짜 */}
+                      <p style={{ margin: "4px 0" }}>{rev.content}</p>
+                      <small style={{ color: "#999", fontSize: "10px" }}>
+                        {new Date(rev.created_at).toLocaleDateString()}
+                      </small>
+                    </div>
+                  ))
+                ) : (
+                  <p style={{ fontSize: "12px", color: "#999", textAlign: "center" }}>아직 리뷰가 없어요. 첫 리뷰를 남겨보세요! 🐟</p>
+                )}
               </div>
-
               {/* 리뷰 입력 폼 (로그인 시에만) */}
               {session && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>

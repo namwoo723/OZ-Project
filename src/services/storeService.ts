@@ -50,5 +50,15 @@ export const storeService = {
 
     if (error) throw error;
     return data;
+  },
+
+  // 리뷰 삭제
+  async deleteReview(reviewId: string) {
+    const { error } = await supabase
+      .from("store_reviews")
+      .delete()
+      .eq("id", reviewId);
+
+    if (error) throw error;
   }
 };

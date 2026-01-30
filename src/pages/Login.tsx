@@ -1,6 +1,7 @@
 import { supabase } from '../supabase';
 import "./Login.css";
 
+// 단순 상태 변경이나 창 닫는 기능은 반환값이 필요 없기 때문에 void 타입 지정
 export default function Login({ onClose }: {onClose: () => void}) {
   // 구글 로그인
   const handleGoogleLogin = async () => {
