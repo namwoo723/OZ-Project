@@ -8,6 +8,7 @@ import { CATEGORIES, ICON_URLS } from '../constants/mapIcons';
 import { GOOGLE_MAP_STYLE } from '../constants/mapStyles';
 import { storeService } from '../services/storeService';
 import ReportModal from './ReportModal';
+import { getTier } from '../constants/tiers';
 
 export default function MyMap({ session }: { session: any }) {
   const { isLoaded } = useJsApiLoader({
@@ -79,7 +80,8 @@ export default function MyMap({ session }: { session: any }) {
         user_name: session.user.user_metadata.full_name || "익명",
         user_avatar: session.user.user_metadata.avatar_url,
         rating,
-        content: newComment
+        content: newComment,
+        user_activity_count: stores.filter(s => s.user_id === session.user.id).length + 1 
       });
 
       setNewComment(""); // 입력창 초기화
@@ -147,33 +149,69 @@ export default function MyMap({ session }: { session: any }) {
     setTimeout(() => setShowToast(false), 3000);
   }
 
-  const handleReportSubmit = async (name: string, category: string) => {
-    // 유효성 검사(이름 공백 혹은 좌표 없을시 중단)
+  const handleReportSubmit = async (name: string, category: string, newLat: number, newLng: number) => {
+    // 세션 체크
+    if (!session) {
+      triggerToast("🔑 로그인이 필요합니다.");
+      return;
+    }
+
+    // 쿨다운 체크
+    const LAST_REPORT_KEY = `last_report_${session.user.id}`;
+    const lastReportTime = localStorage.getItem(LAST_REPORT_KEY);
+    const now = Date.now();
+    const COOLDOWN_MS = 10 * 60 * 1000; // 10분
+
+    if (lastReportTime && now - Number(lastReportTime) < COOLDOWN_MS) {
+      const remainingMin = Math.ceil((COOLDOWN_MS - (now - Number(lastReportTime))) / 60000);
+      triggerToast(`⚠️ ${remainingMin}분 뒤에 가능합니다!`);
+      return;
+    }
+    
+    // 유효성 검사
     if(!name || !clickedCoord) {
       triggerToast("가게 이름을 입력해 주세요!");
       return;
     }
 
-    // 수파베이스 insert 호출
-    const { error } = await supabase
-      .from("stores")
-      .insert([{
-          name,
-          category,
-          lat: clickedCoord.lat,
-          lng: clickedCoord.lng,
-          user_id: session?.user?.id // 현재 로그인한 사용자의 ID 추가
-      }]);
-    if (error) {
-      alert("저장 중 오류가 발생했습니다.");
-      return;
-    }
+    try {
+      // 중복 체크
+      const { data: existingStore } = await supabase
+        .from("stores")
+        .select("id")
+        .eq("lat", newLat)
+        .eq("lng", newLng)
+        .maybeSingle();
 
-    // 저장 성공 후 처리
-    triggerToast("🐟 맛집 제보 완료!")
-    setIsModalOpen(false); // 모달 닫기
-    // 지도 데이터 새로고침 (방금 넣은 마커 바로 보이게 하기)
-    fetchStores();
+      if (existingStore) {
+        alert("이미 같은 위치에 등록된 노점이 있습니다! 붕어빵은 나눠 먹어야 제맛이죠. 😉");
+        return;
+      }
+
+      // 수파베이스 데이터 삽입
+      const { error } = await supabase
+        .from("stores")
+        .insert([{
+            name,
+            category,
+            lat: clickedCoord.lat,
+            lng: clickedCoord.lng,
+            user_id: session.user.id
+        }]);
+
+      if (error) throw error;
+
+      // 성공 시 쿨다운 시간 업데이트
+      localStorage.setItem(LAST_REPORT_KEY, now.toString());
+      
+      triggerToast("🐟 맛집 제보 완료!");
+      setIsModalOpen(false); 
+      fetchStores(); // 지도 데이터 새로고침
+
+    } catch (error) {
+      console.error("제보 오류:", error);
+      alert("저장 중 오류가 발생했습니다.");
+    }
   }
 
   const handleDeleteStore = async (storeId: string) => {
@@ -351,40 +389,45 @@ export default function MyMap({ session }: { session: any }) {
 
               <hr style={{ border: "0.5px solid #eee", margin: "10px 0" }} />
 
-              {/* 리뷰 목록 표시 */}
-              <div style={{ maxHeight: "200px", overflowY: "auto", marginBottom: "10px" }}>
+              {/* 리뷰 목록 */}
+              <div style={{ marginTop: "10px", maxHeight: "200px", overflowY: "auto" }}>
                 {reviews.length > 0 ? (
-                  reviews.map((rev: any) => (
-                    <div key={rev.id} style={{ fontSize: "12px", padding: "8px 0", borderBottom: "1px solid #f9f9f9" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div>
-                          <strong>{rev.user_name}</strong> 
-                          <span style={{ color: "#f8c967", marginLeft: "5px" }}>{"⭐".repeat(rev.rating)}</span>
+                  reviews.map((rev: any) => {
+                    const userTier = getTier(0); 
+
+                    return (
+                      <div key={rev.id} style={{ fontSize: "12px", padding: "8px 0", borderBottom: "1px solid #f9f9f9" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          
+                          {/* 이름 왼쪽에 티어 배지 */}
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <div title={userTier.name} style={{ display: "flex", alignItems: "center" }}>
+                              <svg width="12" height="12" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+                                <circle cx="12" cy="12" r="10" fill={userTier.color} stroke="white" strokeWidth="2"/>
+                              </svg>
+                            </div>
+                            <strong style={{ whiteSpace: "nowrap" }}>{rev.user_name}</strong>
+                            <span style={{ color: "#f8c967", marginLeft: "2px" }}>{"⭐".repeat(rev.rating)}</span>
+                          </div>
+
+                          {session?.user?.id === rev.user_id && (
+                            <button 
+                              onClick={() => handleDeleteReview(rev.id)} 
+                              style={{ background: "none", border: "none", color: "#ff4d4f", cursor: "pointer", fontSize: "10px" }}
+                            >
+                              ✕
+                            </button>
+                          )}
                         </div>
-                        
-                        {/* 본인일 때만 삭제 버튼 표시 */}
-                        {session?.user?.id === rev.user_id && (
-                          <button 
-                            onClick={() => handleDeleteReview(rev.id)}
-                            style={{ 
-                              background: "none", border: "none", color: "#ff4d4f", 
-                              cursor: "pointer", fontSize: "10px"
-                            }}
-                          >
-                            ✕
-                          </button>
-                        )}
+                        <p style={{ margin: "4px 0", color: "#333", paddingLeft: "18px" }}>{rev.content}</p>
+                        <small style={{ color: "#999", fontSize: "10px", paddingLeft: "18px" }}>
+                          {new Date(rev.created_at).toLocaleDateString()}
+                        </small>
                       </div>
-                      
-                      {/* 리뷰 내용 및 날짜 */}
-                      <p style={{ margin: "4px 0" }}>{rev.content}</p>
-                      <small style={{ color: "#999", fontSize: "10px" }}>
-                        {new Date(rev.created_at).toLocaleDateString()}
-                      </small>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
-                  <p style={{ fontSize: "12px", color: "#999", textAlign: "center" }}>아직 리뷰가 없어요. 첫 리뷰를 남겨보세요! 🐟</p>
+                  <p style={{ fontSize: "12px", color: "#999", textAlign: "center" }}>아직 리뷰가 없습니다.</p>
                 )}
               </div>
               {/* 리뷰 입력 폼 (로그인 시에만) */}
@@ -437,7 +480,9 @@ export default function MyMap({ session }: { session: any }) {
       {isModalOpen && (
         <ReportModal
           onClose = {() => setIsModalOpen(false)}
-          onSubmit = {handleReportSubmit}
+          onSubmit={(name, category) => 
+            handleReportSubmit(name, category, clickedCoord!.lat, clickedCoord!.lng)
+          }
         />
       )} 
       {/* 토스트 알림 UI */}

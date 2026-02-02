@@ -60,5 +60,18 @@ export const storeService = {
       .eq("id", reviewId);
 
     if (error) throw error;
-  }
+  },
+
+  async fetchStoresInBounds(sw: any, ne: any): Promise<Store[]> {
+  const { data, error } = await supabase
+    .from("stores")
+    .select("*")
+    .gte("lat", sw.lat)
+    .lte("lat", ne.lat)
+    .gte("lng", sw.lng)
+    .lte("lng", ne.lng());
+
+  if (error) throw error;
+  return data as Store[];
+}
 };
