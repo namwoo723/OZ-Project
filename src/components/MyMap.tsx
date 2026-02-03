@@ -10,6 +10,13 @@ import { storeService } from '../services/storeService';
 import ReportModal from './ReportModal';
 import { getTier } from '../constants/tiers';
 
+const KOREA_BOUNDS = {
+  north: 38.6, // 북한 위쪽
+  south: 33.0, // 제주도 아래
+  west: 124.0, // 백령도 왼쪽
+  east: 132.0, // 독도 오른쪽
+};
+
 export default function MyMap({ session }: { session: any }) {
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY
@@ -28,6 +35,7 @@ export default function MyMap({ session }: { session: any }) {
   const [reviews, setReviews] = useState<any[]>([]);
   const [newComment, setNewComment] = useState("");
   const [rating, setRating] = useState(5);
+  const [map, setMap] = useState<google.maps.Map | null>(null);
 
   // 로딩스피너 시간 지연 
   useEffect(() => {
@@ -38,6 +46,27 @@ export default function MyMap({ session }: { session: any }) {
     return () => clearTimeout(timer);
   },[]);
   
+  const fetchStoresInBounds = async () => {
+    if (!map) return;
+
+    const bounds = map.getBounds();
+    if (!bounds) return;
+
+    const sw = bounds.getSouthWest(); // 남서쪽 좌표
+    const ne = bounds.getNorthEast(); // 북동쪽 좌표
+
+    try {
+      // 이미 storeService에 만들어둔 fetchStoresInBounds를 사용합니다
+      const data = await storeService.fetchStoresInBounds(
+        { lat: sw.lat(), lng: sw.lng() },
+        { lat: ne.lat(), lng: ne.lng() }
+      );
+      setStores(data);
+    } catch (error) {
+      console.error("범위 내 데이터 로드 실패:", error);
+    }
+  };
+
   const fetchStores = async () => {
     try {
       const data = await storeService.fetchStores();
@@ -292,7 +321,9 @@ export default function MyMap({ session }: { session: any }) {
       <GoogleMap 
         mapContainerStyle = {{ width: "100%", height: "100vh" }}
         center = { center }
-        zoom = {13}
+        zoom = {13} // 초기 줌 레벨
+        onLoad = {(map) => setMap(map)} // 지도 로드시 map 객체 저장
+        onIdle = {fetchStoresInBounds} // 지도 움직임 멈출시 데이터 로드
         onClick = {(e) => {
           // 로그인했을 떄만 제보 모달 열기 로직
           if (!session) {
@@ -302,15 +333,33 @@ export default function MyMap({ session }: { session: any }) {
           const lat = e.latLng?.lat();
           const lng = e.latLng?.lng();
           console.log({ lat, lng });
+
           if (lat && lng) {
-            console.log("제보 위치:", lat, lng);
+            const isInsideKorea = 
+              lat <= KOREA_BOUNDS.north && 
+              lat >= KOREA_BOUNDS.south && 
+              lng <= KOREA_BOUNDS.east && 
+              lng >= KOREA_BOUNDS.west;
+
+            if (!isInsideKorea) {
+              triggerToast("📍 한국 지역만 제보가 가능합니다!");
+              return; // 한국 밖이면 모달을 띄우지 않고 종료
+            }
+
             setClickedCoord({ lat, lng });
-            setIsModalOpen(true); // 모달 오픈
+            setIsModalOpen(true);
           }
         }}
         options = {{
           styles: GOOGLE_MAP_STYLE,
           disableDefaultUI: true, // 불필요한 구글 버튼 제거
+          // 대한민국 밖으로 나가지 못하게 제한
+          restriction: {
+            latLngBounds: KOREA_BOUNDS,
+            strictBounds: false,
+          },
+          minZoom: 7, // 너무 멀리서 보지 못하게 제한
+          maxZoom: 18,
         }}
       >
         <MarkerClusterer
