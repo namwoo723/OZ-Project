@@ -1,0 +1,29 @@
+.category-container {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  z-index: 10;
+}
+
+.category-btn {
+  padding: 8px 16px; /* 좌우 여백을 넓혀서 가로로 길게 */
+  border-radius: 20px;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  background-color: white;
+  transition: all 0.2s ease;
+}
+
+.category-btn.active {
+  background-color: #F8C967;
+  color: white;
+}
+
+.category-btn:hover {
+  transform: translateY(-2px); /* 살짝 떠오르는 효과 */
+}

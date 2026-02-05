@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './supabase';
-import MyMap from './components/MyMap';
+import MapPage from './pages/MapPage';
 
 export default function App() {
   const [session, setSession] = useState<any>(null); // 로그인 세션
@@ -20,7 +20,7 @@ export default function App() {
 
   return (
     <div style={{ width: "100%", height: "100vh" }}>
-      <MyMap session={session} />
+      <MapPage session={session} />
     </div>
   );
 }

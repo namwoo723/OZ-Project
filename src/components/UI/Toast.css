@@ -1,0 +1,22 @@
+/* 토스트 애니메이션 */
+@keyframes fadeInOut {
+  0% { opacity: 0; bottom: 80px; }
+  15% { opacity: 1; bottom: 100px; }
+  85% { opacity: 1; bottom: 100px; }
+  100% { opacity: 0; bottom: 80px; }
+}
+
+/* 토스트 스타일 클래스 */
+.toast-container {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: white;
+  font-weight: bold;
+  padding: 12px 48px;
+  border-radius: 20px;
+  z-index: 2000;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  animation: fadeInOut 3s ease-in-out;
+  color: black; /* 글자색 명시 */
+}

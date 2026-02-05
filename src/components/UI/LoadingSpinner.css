@@ -1,0 +1,22 @@
+/* 스피너 회전 애니메이션 */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 스피너 스타일 클래스 */
+.spinner-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 3000;
+}
+
+.bungeo-spinner {
+  width: 80px;
+  animation: spin 2s linear infinite;
+}
