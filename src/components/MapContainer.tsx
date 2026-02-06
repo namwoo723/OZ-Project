@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { GoogleMap, MarkerF, InfoWindow, MarkerClusterer } from '@react-google-maps/api';
 import { ICON_URLS } from '../constants/mapIcons';
 import { GOOGLE_MAP_STYLE } from '../constants/mapStyles';
@@ -25,21 +25,29 @@ interface MapContainerProps {
   selectedStore: any;
   setSelectedStore: (store: any) => void;
   reviews: any[];
-  handleReviewSubmit: () => void;
-  handleDeleteReview: (id: string) => void;
-  handleDeleteStore: (id: string) => void;
-  newComment: string;
-  setNewComment: (val: string) => void;
-  rating: number;
-  setRating: (val: number) => void;
+  // 함수의 타입 정의를 MapPage의 실제 함수와 일치시킴
+  handleReviewSubmit: (content: string, rating: number) => Promise<void> | void;
+  handleDeleteReview: (id: string) => Promise<void> | void;
+  handleDeleteStore: (id: string) => Promise<void> | void;
   setReviews: (val: any[]) => void;
 }
 
 const MapContainer: React.FC<MapContainerProps> = ({
   session, stores, center, filter, myLocation, onMapLoad, onIdle, onMapClick, 
   onStoreClick, selectedStore, setSelectedStore, reviews, handleReviewSubmit, 
-  handleDeleteReview, handleDeleteStore, newComment, setNewComment, rating, setRating, setReviews
+  handleDeleteReview, handleDeleteStore, setReviews
 }) => {
+  // 💡 리뷰 관련 상태를 여기서 관리합니다.
+  const [newComment, setNewComment] = useState("");
+  const [rating, setRating] = useState(5);
+
+  // 리뷰 제출 후 입력창 초기화를 위한 래퍼 함수
+  const onReviewSubmitInternal = async () => {
+    await handleReviewSubmit(newComment, rating);
+    setNewComment(""); // 제출 성공 후 초기화
+    setRating(5);
+  };
+
   return (
     <GoogleMap 
       mapContainerStyle={{ width: "100%", height: "100vh" }}
@@ -125,7 +133,7 @@ const MapContainer: React.FC<MapContainerProps> = ({
             newComment={newComment}
             setRating={setRating}
             setNewComment={setNewComment}
-            handleReviewSubmit={handleReviewSubmit}
+            handleReviewSubmit={onReviewSubmitInternal}
             handleDeleteReview={handleDeleteReview}
             handleDeleteStore={handleDeleteStore}
           />
