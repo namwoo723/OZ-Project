@@ -6,7 +6,7 @@ import "./MapPage.css"
 import type { Store } from '../types/store';
 import { storeService } from '../services/storeService';
 import ReportModal from '../components/ReportModal';
-import CategoryTab from '../constants/UI/CategoryTab';
+import CategoryTab from '../components/UI/CategoryTab';
 import MapContainer from '../components/MapContainer';
 import { useMapLogic } from '../hooks/useMapLogic';
 import LoadingSpinner from '../components/UI/LoadingSpinner';

@@ -42,7 +42,7 @@
 src/
  ├─ components/
  │   ├─ Map/         # 지도 및 정보창 관련 부품
- │   └─ UI/          # 토스트, 버튼, 스피너, 카테고리 등 공통 UI
+ │   └─ UI/          # 토스트, 버튼, 스피너, 카테고리탭 등 공통 UI
  ├─ constants/       # 스타일 및 아이콘 상수
  ├─ hooks/           # 비즈니스 로직 (useMapLogic)
  ├─ pages/           # 메인 페이지 및 로그인 페이지
